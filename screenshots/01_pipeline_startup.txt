@@ -1,0 +1,5 @@
+# Screenshot Placeholder: Pipeline Startup
+# This represents what would be captured in 01_pipeline_startup.png === GPU-Accelerated Spark Pipeline Startup ===
+Generated: 2025-01-22 14:30:22 [SPARK CONFIGURATION] Spark Version: 3.5.1 Scala Version: 2.12.17 Java Version: 11.0.16 [GPU DETECTION] NVIDIA GPU Detected: Tesla V100 (16GB) CUDA Version: 11.8 RAPIDS Accelerator: 24.02.0 - ENABLED [SYSTEM RESOURCES] CPU Cores: 48 System Memory: 192GB GPU Memory: 16GB Available Disk: 500GB [CONFIGURATION LOADED] spark.plugins=com.nvidia.spark.SQLPlugin spark.rapids.sql.enabled=true spark.rapids.memory.gpu.allocFraction=0.8 spark.sql.adaptive.enabled=true [INITIALIZATION COMPLETE]
+Pipeline ready for execution...
+Starting data generation phase... Note: This is a text representation of what would be shown in the actual screenshot during pipeline startup.
