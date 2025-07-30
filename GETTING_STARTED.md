@@ -5,6 +5,7 @@
 - Java 11+
 - SBT (Scala Build Tool)
 - 8GB+ RAM
+- Git (for cloning the repository)
 - NVIDIA GPU (optional, for GPU acceleration)
 
 ## Installation
@@ -33,6 +34,18 @@ brew install sbt
 # Windows - download from scala-sbt.org
 ```
 
+### Install Git
+
+```bash
+# Ubuntu/Debian
+sudo apt install git
+
+# macOS
+brew install git
+
+# Windows - download from git-scm.com
+```
+
 ## Running
 ```bash
 git clone https://github.com/adil-faiyaz98/accelerated-spark-gpu.git
@@ -52,4 +65,5 @@ After running, you'll find:
 
 - Ensure Java 11+ is installed
 - Check SBT is in your PATH
-- For GPU acceleration, install NVIDIA drivers
+- Verify Git is installed and accessible
+- For GPU acceleration, install NVIDIA drivers and CUDA

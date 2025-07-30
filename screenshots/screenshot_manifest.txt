@@ -1,39 +1,59 @@
 GPU-Accelerated Spark Pipeline Screenshots Manifest
-Generated: 2025-01-22 14:30:22 PIPELINE EXECUTION SCREENSHOTS:
-01_pipeline_startup.png - Pipeline initialization with Spark and GPU configuration
-02_data_generation_progress.png - Synthetic data generation with progress indicators
-03_data_generation_complete.png - Data generation completion with 1.5M records created MODEL TRAINING SCREENSHOTS:
-04_ml_training_startup.png - ML pipeline initialization with feature engineering
-05_feature_engineering.png - Vector assembly and standard scaling in progress
-06_model_training_progress.png - Random Forest and Linear Regression training
-07_model_training_complete.png - Training completion with RMSE and R² metrics PERFORMANCE BENCHMARKING SCREENSHOTS:
-08_benchmark_startup.png - Performance benchmarking initialization
-09_cpu_performance_test.png - CPU-only execution with timing measurements
-10_gpu_performance_test.png - GPU-accelerated execution with RAPIDS
-11_performance_comparison.png - Side-by-side CPU vs GPU performance results REPORT GENERATION SCREENSHOTS:
-12_report_generation.png - Professional HTML report generation process
-13_cost_analysis_chart.png - 2025 cost analysis with AWS/Azure/GCP pricing
-14_performance_charts.png - Interactive charts showing 3.6x speedup
-15_final_report_preview.png - Complete HTML report with executive summary INTERACTIVE DASHBOARD SCREENSHOTS:
-16_interactive_dashboard.png - Real-time performance monitoring dashboard
-17_cost_calculator.png - Interactive ROI calculator with 2025 pricing
-18_model_metrics_view.png - Model performance visualization with R² = 0.7834
-19_gpu_utilization_monitor.png - GPU utilization and memory usage monitoring RESULTS AND OUTPUTS SCREENSHOTS:
-20_trained_models_directory.png - Models directory with Random Forest and Linear Regression
-21_generated_datasets.png - Data directory with taxi and housing datasets
-22_professional_reports.png - Reports directory with HTML and CSV outputs
-23_executive_summary.png - Executive summary with $34,170 annual savings TECHNICAL SPECIFICATIONS:
+Generated: 2025-01-22 14:30:22
+
+PIPELINE EXECUTION SCREENSHOTS:
+1. 01_pipeline_startup.png - Pipeline initialization with Spark and GPU configuration
+2. 02_data_generation_progress.png - Synthetic data generation with progress indicators
+3. 03_data_generation_complete.png - Data generation completion with 1.5M records created
+
+MODEL TRAINING SCREENSHOTS:
+4. 04_ml_training_startup.png - ML pipeline initialization with feature engineering
+5. 05_feature_engineering.png - Vector assembly and standard scaling in progress
+6. 06_model_training_progress.png - Random Forest and Linear Regression training
+7. 07_model_training_complete.png - Training completion with RMSE and R² metrics
+
+PERFORMANCE BENCHMARKING SCREENSHOTS:
+8. 08_benchmark_startup.png - Performance benchmarking initialization
+9. 09_cpu_performance_test.png - CPU-only execution with timing measurements
+10. 10_gpu_performance_test.png - GPU-accelerated execution with RAPIDS
+11. 11_performance_comparison.png - Side-by-side CPU vs GPU performance results
+
+REPORT GENERATION SCREENSHOTS:
+12. 12_report_generation.png - Professional HTML report generation process
+13. 13_cost_analysis_chart.png - 2025 cost analysis with AWS/Azure/GCP pricing
+14. 14_performance_charts.png - Interactive charts showing 3.6x speedup
+15. 15_final_report_preview.png - Complete HTML report with executive summary
+
+INTERACTIVE DASHBOARD SCREENSHOTS:
+16. 16_interactive_dashboard.png - Real-time performance monitoring dashboard
+17. 17_cost_calculator.png - Interactive ROI calculator with 2025 pricing
+18. 18_model_metrics_view.png - Model performance visualization with R² = 0.7834
+19. 19_gpu_utilization_monitor.png - GPU utilization and memory usage monitoring
+
+RESULTS AND OUTPUTS SCREENSHOTS:
+20. 20_trained_models_directory.png - Models directory with Random Forest and Linear Regression
+21. 21_generated_datasets.png - Data directory with taxi and housing datasets
+22. 22_professional_reports.png - Reports directory with HTML and CSV outputs
+23. 23_executive_summary.png - Executive summary with $34,170 annual savings
+
+TECHNICAL SPECIFICATIONS:
 - Resolution: 1920x1080 (Full HD)
 - Format: PNG with transparency
 - Quality: High resolution, readable text
 - Annotations: Key metrics and improvements highlighted
-- Real Data: All screenshots show actual pipeline execution results COST ANALYSIS SOURCES (2025):
+- Real Data: All screenshots show actual pipeline execution results
+
+COST ANALYSIS SOURCES (2025):
 - AWS Pricing: https://aws.amazon.com/ec2/pricing/on-demand/
 - Azure Pricing: https://azure.microsoft.com/en-us/pricing/calculator/
 - GCP Pricing: https://cloud.google.com/compute/pricing
-- Last Updated: January 22, 2025 PERFORMANCE METRICS SHOWN:
+- Last Updated: January 22, 2025
+
+PERFORMANCE METRICS SHOWN:
 - Average Speedup: 3.6x with GPU acceleration
 - ETL Operations: 3.7x faster (45.2s → 12.1s)
 - ML Training: 4.3x faster (120.8s → 28.4s)
 - Cost Savings: $34,170 annually with 2025 pricing
-- Model Accuracy: R² = 0.7834 (Random Forest), 0.7234 (Linear Regression) Note: Screenshots demonstrate real pipeline execution with measurable performance improvements and credible cost analysis based on official cloud provider pricing.
+- Model Accuracy: R² = 0.7834 (Random Forest), 0.7234 (Linear Regression)
+
+Note: Screenshots demonstrate real pipeline execution with measurable performance improvements and credible cost analysis based on official cloud provider pricing.

@@ -1,24 +1,276 @@
-package com.enterprise.spark.gpu.reporting import com.enterprise.spark.gpu.benchmarking.{BenchmarkResults, BenchmarkResult}
-import com.typesafe.scalalogging.LazyLogging /** * Cost analysis service for GPU vs CPU infrastructure comparison. * * This service provides realistic cost analysis based on actual cloud provider pricing * and measured performance improvements. It calculates: * - Infrastructure costs (CPU vs GPU instances) * - Total cost of ownership including compute time * - ROI analysis and break-even calculations * - Cost per workload and annual savings projections * * @author Spark GPU Team */
-class CostAnalysisService extends LazyLogging { /** * Cloud provider instance pricing (USD per hour, as of January 2025). * Sources: AWS Pricing Calculator, Azure Pricing Calculator, GCP Pricing Calculator * All prices are On-Demand rates in US East region without reserved instance discounts. */ case class InstancePricing( // AWS Pricing (Source: https://aws.amazon.com/ec2/pricing/on-demand/ - January 2025) awsCpuInstance: String = "m5.12xlarge", awsCpuHourlyCost: Double = 2.304, // 48 vCPUs, 192 GB RAM awsGpuInstance: String = "p3.8xlarge", awsGpuHourlyCost: Double = 12.24, // 32 vCPUs, 244 GB RAM, 4x NVIDIA V100 GPUs // Azure Pricing (Source: https://azure.microsoft.com/en-us/pricing/calculator/ - January 2025) azureCpuInstance: String = "Standard_D48s_v3", azureCpuHourlyCost: Double = 2.304, // 48 vCPUs, 192 GB RAM azureGpuInstance: String = "Standard_NC24s_v3", azureGpuHourlyCost: Double = 12.24, // 24 vCPUs, 448 GB RAM, 4x NVIDIA V100 GPUs // GCP Pricing (Source: https://cloud.google.com/compute/pricing - January 2025) gcpCpuInstance: String = "n1-standard-48", gcpCpuHourlyCost: Double = 2.28, // 48 vCPUs, 180 GB RAM gcpGpuInstance: String = "n1-standard-16-v100", gcpGpuHourlyCost: Double = 11.70, // 16 vCPUs, 60 GB RAM, 4x NVIDIA V100 GPUs // Cost Analysis Sources and Methodology pricingSource: String = "Official cloud provider pricing calculators (January 2025)", methodology: String = "On-demand pricing without reserved instances or sustained use discounts", lastUpdated: String = "2025-01-22" ) /** * Workload characteristics for cost analysis. */ case class WorkloadProfile( name: String, monthlyJobs: Int, avgJobDurationMinutes: Int, dataProcessingGb: Double, description: String ) /** * Cost analysis results. */ case class CostAnalysisResults( workloadProfile: WorkloadProfile, cpuCosts: ComputeCosts, gpuCosts: ComputeCosts, savings: CostSavings, roiAnalysis: ROIAnalysis, recommendations: Seq[String] ) case class ComputeCosts( instanceType: String, hourlyCost: Double, monthlyComputeHours: Double, monthlyInfrastructureCost: Double, totalMonthlyCost: Double ) case class CostSavings( monthlyDollarSavings: Double, annualDollarSavings: Double, percentageSavings: Double, timeToValue: String ) case class ROIAnalysis( breakEvenMonths: Double, threeYearSavings: Double, costPerWorkload: Double, efficiencyGain: String ) /** * Performs comprehensive cost analysis based on benchmark results. */ def analyzeCosts( benchmarkResults: BenchmarkResults, workloadProfile: WorkloadProfile = getDefaultWorkloadProfile(), pricing: InstancePricing = InstancePricing() ): CostAnalysisResults = { logger.info(s"Analyzing costs for workload: ${workloadProfile.name}") // Calculate average speedup from benchmark results val avgSpeedup = calculateAverageSpeedup(benchmarkResults) logger.info(f"Average GPU speedup: ${avgSpeedup}%.2fx") // Calculate compute requirements val cpuComputeHours = (workloadProfile.monthlyJobs * workloadProfile.avgJobDurationMinutes) / 60.0 val gpuComputeHours = cpuComputeHours / avgSpeedup // Calculate costs (using AWS pricing as default) val cpuCosts = ComputeCosts( instanceType = pricing.awsCpuInstance, hourlyCost = pricing.awsCpuHourlyCost, monthlyComputeHours = cpuComputeHours, monthlyInfrastructureCost = cpuComputeHours * pricing.awsCpuHourlyCost, totalMonthlyCost = cpuComputeHours * pricing.awsCpuHourlyCost ) val gpuCosts = ComputeCosts( instanceType = pricing.awsGpuInstance, hourlyCost = pricing.awsGpuHourlyCost, monthlyComputeHours = gpuComputeHours, monthlyInfrastructureCost = gpuComputeHours * pricing.awsGpuHourlyCost, totalMonthlyCost = gpuComputeHours * pricing.awsGpuHourlyCost ) // Calculate savings val monthlyDollarSavings = cpuCosts.totalMonthlyCost - gpuCosts.totalMonthlyCost val annualDollarSavings = monthlyDollarSavings * 12 val percentageSavings = (monthlyDollarSavings / cpuCosts.totalMonthlyCost) * 100 val savings = CostSavings( monthlyDollarSavings = monthlyDollarSavings, annualDollarSavings = annualDollarSavings, percentageSavings = percentageSavings, timeToValue = if (avgSpeedup > 2.0) "Immediate" else "1-3 months" ) // ROI Analysis val initialGpuInvestment = 0.0 // Assuming cloud instances, no upfront cost val breakEvenMonths = if (monthlyDollarSavings > 0) initialGpuInvestment / monthlyDollarSavings else Double.MaxValue val threeYearSavings = annualDollarSavings * 3 val costPerWorkload = gpuCosts.totalMonthlyCost / workloadProfile.monthlyJobs val roiAnalysis = ROIAnalysis( breakEvenMonths = breakEvenMonths, threeYearSavings = threeYearSavings, costPerWorkload = costPerWorkload, efficiencyGain = f"${avgSpeedup}%.1fx faster processing" ) // Generate recommendations val recommendations = generateRecommendations(avgSpeedup, savings, workloadProfile) CostAnalysisResults( workloadProfile = workloadProfile, cpuCosts = cpuCosts, gpuCosts = gpuCosts, savings = savings, roiAnalysis = roiAnalysis, recommendations = recommendations ) } /** * Calculates average speedup from benchmark results. */ private def calculateAverageSpeedup(benchmarkResults: BenchmarkResults): Double = { val speedups = benchmarkResults.benchmarkResults .groupBy(_.operationType) .map { case (_, results) => val cpuResults = results.filter(_.executionMode == "CPU") val gpuResults = results.filter(_.executionMode == "GPU") if (cpuResults.nonEmpty && gpuResults.nonEmpty) { val avgCpuTime = cpuResults.map(_.averageTimeMs).sum / cpuResults.length val avgGpuTime = gpuResults.map(_.averageTimeMs).sum / gpuResults.length Some(avgCpuTime.toDouble / avgGpuTime) } else None } .flatten .toSeq if (speedups.nonEmpty) speedups.sum / speedups.length else 1.0 } /** * Generates cost-based recommendations. */ private def generateRecommendations( avgSpeedup: Double, savings: CostSavings, workload: WorkloadProfile ): Seq[String] = { val recommendations = scala.collection.mutable.ListBuffer[String]() if (avgSpeedup > 3.0) { recommendations += "Strong GPU acceleration detected - immediate migration recommended" } else if (avgSpeedup > 2.0) { recommendations += "Moderate GPU acceleration - cost-effective for regular workloads" } else { recommendations += "Limited GPU acceleration - evaluate workload characteristics" } if (savings.annualDollarSavings > 50000) { recommendations += "Significant annual savings potential - prioritize GPU adoption" } else if (savings.annualDollarSavings > 10000) { recommendations += "Moderate savings - consider GPU for cost optimization" } if (workload.monthlyJobs > 100) { recommendations += "High-frequency workload - GPU acceleration provides compound benefits" } recommendations += "Consider reserved instances for additional 30-50% cost savings" recommendations += "Monitor GPU utilization to optimize instance sizing" recommendations.toSeq } /** * Default workload profile for analysis. */ private def getDefaultWorkloadProfile(): WorkloadProfile = { WorkloadProfile( name = "Typical ML Pipeline", monthlyJobs = 50, avgJobDurationMinutes = 120, dataProcessingGb = 100.0, description = "Regular ML training and data processing workload" ) } /** * Generates formatted cost analysis report. */ def generateCostReport(analysis: CostAnalysisResults): String = { s"""
-# GPU vs CPU Cost Analysis Report ## Workload Profile
+package com.enterprise.spark.gpu.reporting
+
+import com.enterprise.spark.gpu.benchmarking.{BenchmarkResults, BenchmarkResult}
+import com.typesafe.scalalogging.LazyLogging
+
+/**
+ * Cost analysis service for GPU vs CPU infrastructure comparison.
+ *
+ * This service provides realistic cost analysis based on actual cloud provider pricing
+ * and measured performance improvements. It calculates:
+ * - Infrastructure costs (CPU vs GPU instances)
+ * - Total cost of ownership including compute time
+ * - ROI analysis and break-even calculations
+ * - Cost per workload and annual savings projections
+ *
+ * @author Spark GPU Team
+ */
+class CostAnalysisService extends LazyLogging {
+
+  /**
+   * Cloud provider instance pricing (USD per hour, as of January 2025).
+   * Sources: AWS Pricing Calculator, Azure Pricing Calculator, GCP Pricing Calculator
+   * All prices are On-Demand rates in US East region without reserved instance discounts.
+   */
+  case class InstancePricing(
+    // AWS Pricing (Source: https://aws.amazon.com/ec2/pricing/on-demand/ - January 2025)
+    awsCpuInstance: String = "m5.12xlarge",
+    awsCpuHourlyCost: Double = 2.304, // 48 vCPUs, 192 GB RAM
+    awsGpuInstance: String = "p3.8xlarge", 
+    awsGpuHourlyCost: Double = 12.24, // 32 vCPUs, 244 GB RAM, 4x NVIDIA V100 GPUs
+
+    // Azure Pricing (Source: https://azure.microsoft.com/en-us/pricing/calculator/ - January 2025)
+    azureCpuInstance: String = "Standard_D48s_v3",
+    azureCpuHourlyCost: Double = 2.304, // 48 vCPUs, 192 GB RAM
+    azureGpuInstance: String = "Standard_NC24s_v3",
+    azureGpuHourlyCost: Double = 12.24, // 24 vCPUs, 448 GB RAM, 4x NVIDIA V100 GPUs
+
+    // GCP Pricing (Source: https://cloud.google.com/compute/pricing - January 2025)
+    gcpCpuInstance: String = "n1-standard-48",
+    gcpCpuHourlyCost: Double = 2.28, // 48 vCPUs, 180 GB RAM
+    gcpGpuInstance: String = "n1-standard-16-v100",
+    gcpGpuHourlyCost: Double = 11.70, // 16 vCPUs, 60 GB RAM, 4x NVIDIA V100 GPUs
+
+    // Cost Analysis Sources and Methodology
+    pricingSource: String = "Official cloud provider pricing calculators (January 2025)",
+    methodology: String = "On-demand pricing without reserved instances or sustained use discounts",
+    lastUpdated: String = "2025-01-22"
+  )
+
+  /**
+   * Workload characteristics for cost analysis.
+   */
+  case class WorkloadProfile(
+    name: String,
+    monthlyJobs: Int,
+    avgJobDurationMinutes: Int,
+    dataProcessingGb: Double,
+    description: String
+  )
+
+  /**
+   * Cost analysis results.
+   */
+  case class CostAnalysisResults(
+    workloadProfile: WorkloadProfile,
+    cpuCosts: ComputeCosts,
+    gpuCosts: ComputeCosts,
+    savings: CostSavings,
+    roiAnalysis: ROIAnalysis,
+    recommendations: Seq[String]
+  )
+
+  case class ComputeCosts(
+    instanceType: String,
+    hourlyCost: Double,
+    monthlyComputeHours: Double,
+    monthlyInfrastructureCost: Double,
+    totalMonthlyCost: Double
+  )
+
+  case class CostSavings(
+    monthlyDollarSavings: Double,
+    annualDollarSavings: Double,
+    percentageSavings: Double,
+    timeToValue: String
+  )
+
+  case class ROIAnalysis(
+    breakEvenMonths: Double,
+    threeYearSavings: Double,
+    costPerWorkload: Double,
+    efficiencyGain: String
+  )
+
+  /**
+   * Performs comprehensive cost analysis based on benchmark results.
+   */
+  def analyzeCosts(
+    benchmarkResults: BenchmarkResults,
+    workloadProfile: WorkloadProfile = getDefaultWorkloadProfile(),
+    pricing: InstancePricing = InstancePricing()
+  ): CostAnalysisResults = {
+    logger.info(s"Analyzing costs for workload: ${workloadProfile.name}")
+
+    // Calculate average speedup from benchmark results
+    val avgSpeedup = calculateAverageSpeedup(benchmarkResults)
+    logger.info(f"Average GPU speedup: ${avgSpeedup}%.2fx")
+
+    // Calculate compute requirements
+    val cpuComputeHours = (workloadProfile.monthlyJobs * workloadProfile.avgJobDurationMinutes) / 60.0
+    val gpuComputeHours = cpuComputeHours / avgSpeedup
+
+    // Calculate costs (using AWS pricing as default)
+    val cpuCosts = ComputeCosts(
+      instanceType = pricing.awsCpuInstance,
+      hourlyCost = pricing.awsCpuHourlyCost,
+      monthlyComputeHours = cpuComputeHours,
+      monthlyInfrastructureCost = cpuComputeHours * pricing.awsCpuHourlyCost,
+      totalMonthlyCost = cpuComputeHours * pricing.awsCpuHourlyCost
+    )
+
+    val gpuCosts = ComputeCosts(
+      instanceType = pricing.awsGpuInstance,
+      hourlyCost = pricing.awsGpuHourlyCost,
+      monthlyComputeHours = gpuComputeHours,
+      monthlyInfrastructureCost = gpuComputeHours * pricing.awsGpuHourlyCost,
+      totalMonthlyCost = gpuComputeHours * pricing.awsGpuHourlyCost
+    )
+
+    // Calculate savings
+    val monthlyDollarSavings = cpuCosts.totalMonthlyCost - gpuCosts.totalMonthlyCost
+    val annualDollarSavings = monthlyDollarSavings * 12
+    val percentageSavings = (monthlyDollarSavings / cpuCosts.totalMonthlyCost) * 100
+
+    val savings = CostSavings(
+      monthlyDollarSavings = monthlyDollarSavings,
+      annualDollarSavings = annualDollarSavings,
+      percentageSavings = percentageSavings,
+      timeToValue = if (avgSpeedup > 2.0) "Immediate" else "1-3 months"
+    )
+
+    // ROI Analysis
+    val initialGpuInvestment = 0.0 // Assuming cloud instances, no upfront cost
+    val breakEvenMonths = if (monthlyDollarSavings > 0) initialGpuInvestment / monthlyDollarSavings else Double.MaxValue
+    val threeYearSavings = annualDollarSavings * 3
+    val costPerWorkload = gpuCosts.totalMonthlyCost / workloadProfile.monthlyJobs
+
+    val roiAnalysis = ROIAnalysis(
+      breakEvenMonths = breakEvenMonths,
+      threeYearSavings = threeYearSavings,
+      costPerWorkload = costPerWorkload,
+      efficiencyGain = f"${avgSpeedup}%.1fx faster processing"
+    )
+
+    // Generate recommendations
+    val recommendations = generateRecommendations(avgSpeedup, savings, workloadProfile)
+
+    CostAnalysisResults(
+      workloadProfile = workloadProfile,
+      cpuCosts = cpuCosts,
+      gpuCosts = gpuCosts,
+      savings = savings,
+      roiAnalysis = roiAnalysis,
+      recommendations = recommendations
+    )
+  }
+
+  /**
+   * Calculates average speedup from benchmark results.
+   */
+  private def calculateAverageSpeedup(benchmarkResults: BenchmarkResults): Double = {
+    val speedups = benchmarkResults.benchmarkResults
+      .groupBy(_.operationType)
+      .map { case (_, results) =>
+        val cpuResults = results.filter(_.executionMode == "CPU")
+        val gpuResults = results.filter(_.executionMode == "GPU")
+        
+        if (cpuResults.nonEmpty && gpuResults.nonEmpty) {
+          val avgCpuTime = cpuResults.map(_.averageTimeMs).sum / cpuResults.length
+          val avgGpuTime = gpuResults.map(_.averageTimeMs).sum / gpuResults.length
+          Some(avgCpuTime.toDouble / avgGpuTime)
+        } else None
+      }
+      .flatten
+      .toSeq
+
+    if (speedups.nonEmpty) speedups.sum / speedups.length else 1.0
+  }
+
+  /**
+   * Generates cost-based recommendations.
+   */
+  private def generateRecommendations(
+    avgSpeedup: Double,
+    savings: CostSavings,
+    workload: WorkloadProfile
+  ): Seq[String] = {
+    val recommendations = scala.collection.mutable.ListBuffer[String]()
+
+    if (avgSpeedup > 3.0) {
+      recommendations += "Strong GPU acceleration detected - immediate migration recommended"
+    } else if (avgSpeedup > 2.0) {
+      recommendations += "Moderate GPU acceleration - cost-effective for regular workloads"
+    } else {
+      recommendations += "Limited GPU acceleration - evaluate workload characteristics"
+    }
+
+    if (savings.annualDollarSavings > 50000) {
+      recommendations += "Significant annual savings potential - prioritize GPU adoption"
+    } else if (savings.annualDollarSavings > 10000) {
+      recommendations += "Moderate savings - consider GPU for cost optimization"
+    }
+
+    if (workload.monthlyJobs > 100) {
+      recommendations += "High-frequency workload - GPU acceleration provides compound benefits"
+    }
+
+    recommendations += "Consider reserved instances for additional 30-50% cost savings"
+    recommendations += "Monitor GPU utilization to optimize instance sizing"
+
+    recommendations.toSeq
+  }
+
+  /**
+   * Default workload profile for analysis.
+   */
+  private def getDefaultWorkloadProfile(): WorkloadProfile = {
+    WorkloadProfile(
+      name = "Typical ML Pipeline",
+      monthlyJobs = 50,
+      avgJobDurationMinutes = 120,
+      dataProcessingGb = 100.0,
+      description = "Regular ML training and data processing workload"
+    )
+  }
+
+  /**
+   * Generates formatted cost analysis report.
+   */
+  def generateCostReport(analysis: CostAnalysisResults): String = {
+    s"""
+# GPU vs CPU Cost Analysis Report
+
+## Workload Profile
 - **Name**: ${analysis.workloadProfile.name}
 - **Monthly Jobs**: ${analysis.workloadProfile.monthlyJobs}
 - **Avg Job Duration**: ${analysis.workloadProfile.avgJobDurationMinutes} minutes
-- **Data Processing**: ${analysis.workloadProfile.dataProcessingGb} GB per job ## Cost Comparison ### CPU Infrastructure (${analysis.cpuCosts.instanceType})
+- **Data Processing**: ${analysis.workloadProfile.dataProcessingGb} GB per job
+
+## Cost Comparison
+### CPU Infrastructure (${analysis.cpuCosts.instanceType})
 - **Hourly Cost**: $${analysis.cpuCosts.hourlyCost}
 - **Monthly Compute Hours**: ${analysis.cpuCosts.monthlyComputeHours.formatted("%.1f")}
-- **Monthly Cost**: $${analysis.cpuCosts.totalMonthlyCost.formatted("%.2f")} ### GPU Infrastructure (${analysis.gpuCosts.instanceType})
+- **Monthly Cost**: $${analysis.cpuCosts.totalMonthlyCost.formatted("%.2f")}
+
+### GPU Infrastructure (${analysis.gpuCosts.instanceType})
 - **Hourly Cost**: $${analysis.gpuCosts.hourlyCost}
 - **Monthly Compute Hours**: ${analysis.gpuCosts.monthlyComputeHours.formatted("%.1f")}
-- **Monthly Cost**: $${analysis.gpuCosts.totalMonthlyCost.formatted("%.2f")} ## Financial Impact
+- **Monthly Cost**: $${analysis.gpuCosts.totalMonthlyCost.formatted("%.2f")}
+
+## Financial Impact
 - **Monthly Savings**: $${analysis.savings.monthlyDollarSavings.formatted("%.2f")} (${analysis.savings.percentageSavings.formatted("%.1f")}%)
 - **Annual Savings**: $${analysis.savings.annualDollarSavings.formatted("%.2f")}
 - **3-Year Savings**: $${analysis.roiAnalysis.threeYearSavings.formatted("%.2f")}
-- **Cost per Workload**: $${analysis.roiAnalysis.costPerWorkload.formatted("%.2f")} ## Recommendations
-${analysis.recommendations.map(r => s"- $r").mkString("\n")} ## ROI Summary
+- **Cost per Workload**: $${analysis.roiAnalysis.costPerWorkload.formatted("%.2f")}
+
+## Recommendations
+${analysis.recommendations.map(r => s"- $r").mkString("\n")}
+
+## ROI Summary
 - **Efficiency Gain**: ${analysis.roiAnalysis.efficiencyGain}
 - **Time to Value**: ${analysis.savings.timeToValue}
 - **Break-even**: ${if (analysis.roiAnalysis.breakEvenMonths < 12) f"${analysis.roiAnalysis.breakEvenMonths}%.1f months" else "Immediate (cloud instances)"}
-""" }
+"""
+  }
 }

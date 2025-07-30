@@ -27,14 +27,14 @@
     "type": 1,
     "size": 8,
     "values": [
-      15234.56,  // total_rooms coefficient
-      -2345.67,  // bedrooms coefficient
-      8901.23,   // bathrooms coefficient
-      125.78,    // square_feet coefficient
-      -456.89,   // age_years coefficient
-      -1234.56,  // distance_to_center_km coefficient
-      -2890.12,  // crime_rate coefficient
-      4567.89    // school_rating coefficient
+      15234.56,
+      -2345.67,
+      8901.23,
+      125.78,
+      -456.89,
+      -1234.56,
+      -2890.12,
+      4567.89
     ]
   },
   "intercept": 125000.0,

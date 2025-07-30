@@ -159,12 +159,12 @@ spark.rapids.memory.gpu.pooling.enabled=true
 ## Benchmarking Results
 
 ### Sample Performance Metrics
-| Operation Type | Dataset Size | CPU Time | GPU Time | Speedup |
-|---------------|--------------|----------|----------|---------|
-| ETL Operations | 1M records | 45.2s | 14.1s | 3.2x |
-| Random Forest | 500K records | 28.7s | 13.6s | 2.1x |
-| Linear Regression | 500K records | 12.3s | 6.8s | 1.8x |
-| Aggregations | 2M records | 67.4s | 15.0s | 4.5x |
+| Operation Type   | Dataset Size | CPU Time | GPU Time | Speedup |
+|-------------------|--------------|----------|----------|---------|
+| ETL Operations    | 1M records   | 45.2s    | 14.1s    | 3.2x    |
+| Random Forest     | 500K records | 28.7s    | 13.6s    | 2.1x    |
+| Linear Regression | 500K records | 12.3s    | 6.8s     | 1.8x    |
+| Aggregations      | 2M records   | 67.4s    | 15.0s    | 4.5x    |
 
 ### System Requirements
 - **Minimum**: 4GB RAM, 4 CPU cores

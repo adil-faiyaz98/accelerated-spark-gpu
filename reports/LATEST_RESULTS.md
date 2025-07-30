@@ -13,18 +13,18 @@ GPU-accelerated Spark pipeline demonstrates significant performance improvements
 ## Detailed Results
 
 ### ETL Operations
-| Operation | CPU | GPU | Speedup |
-|-----------|-----|-----|---------|
-| Complex Filtering | 18s | 5s | **3.5x** |
-| Multi-table Joins | 32s | 9s | **3.6x** |
-| Data Transformations | 27s | 7s | **3.7x** |
+| Operation           | CPU | GPU | Speedup   |
+|---------------------|-----|-----|-----------|
+| Complex Filtering   | 18s | 5s  | **3.5x**  |
+| Multi-table Joins   | 32s | 9s  | **3.6x**  |
+| Data Transformations| 27s | 7s  | **3.7x**  |
 
 ### Machine Learning Training
 
-| Model | CPU | GPU | Speedup |
-|-------|-----|-----|---------|
-| Random Forest | 78s | 18s | **4.3x** |
-| Linear Regression | 43s | 10s | **4.1x** |
+| Model              | CPU | GPU | Speedup   |
+|--------------------|-----|-----|-----------|
+| Random Forest      | 78s | 18s | **4.3x**  |
+| Linear Regression  | 43s | 10s | **4.1x**  |
 
 ## Technical Details
 

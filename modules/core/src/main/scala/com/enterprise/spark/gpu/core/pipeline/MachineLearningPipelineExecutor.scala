@@ -1,43 +1,173 @@
-package com.enterprise.spark.gpu.core.pipeline import com.enterprise.spark.gpu.core.config.SparkGpuConfiguration
-import com.enterprise.spark.gpu.core.data.SyntheticDataGenerator
+package com.enterprise.spark.gpu.core.pipeline
+
+import com.enterprise.spark.gpu.core.config.SparkGpuConfiguration
+import com.enterprise.spark.gpu.core.data.{DataGenerationSummary, SyntheticDataGenerator}
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.spark.ml.Pipeline
+import org.apache.spark.ml.{Pipeline, PipelineModel}
 import org.apache.spark.ml.evaluation.RegressionEvaluator
 import org.apache.spark.ml.feature.{StandardScaler, VectorAssembler}
-import org.apache.spark.ml.regression.{RandomForestRegressor, LinearRegression}
+import org.apache.spark.ml.regression.{LinearRegression, RandomForestRegressor}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
-import java.io.File /** * Machine Learning Pipeline Executor for GPU acceleration demonstration. * * This class orchestrates the complete ML workflow including: * - Synthetic data generation with realistic patterns * - Feature engineering and data preprocessing * - Model training with both CPU and GPU-optimized algorithms * - Model evaluation and performance metrics * - Comprehensive logging and progress tracking * * The pipeline is designed to showcase measurable GPU acceleration benefits * in real-world ML scenarios while maintaining code quality. * * @author Spark GPU Team */
-class MachineLearningPipelineExecutor extends LazyLogging { private var sparkSession: Option[SparkSession] = None private val configuration = new SparkGpuConfiguration() /** * Executes the complete ML pipeline workflow. * * This method runs the full end-to-end pipeline: * 1. Initialize optimized Spark session with GPU detection * 2. Generate synthetic datasets for training and evaluation * 3. Perform feature engineering and data preprocessing * 4. Train multiple ML models (Random Forest, Linear Regression) * 5. Evaluate model performance and generate metrics * 6. Save trained models for later use * * @return Pipeline execution summary with performance metrics */ def executeComplete(): PipelineExecutionSummary = { logger.info("=== Starting Complete ML Pipeline Execution ===") val startTime = System.currentTimeMillis() try { // Step 1: Initialize Spark session with optimal configuration logger.info("Step 1: Initializing Spark session with GPU optimization") val spark = initializeSparkSession() // Step 2: Generate synthetic training data logger.info("Step 2: Generating synthetic datasets") val dataGenerator = new SyntheticDataGenerator(spark) val dataGenerationSummary = dataGenerator.generateAllDatasets() // Step 3: Load and prepare housing data for ML training logger.info("Step 3: Loading and preparing housing dataset for ML training") val housingData = loadHousingDataset(spark, dataGenerationSummary.housingFilePath) val (trainingData, testData) = prepareTrainingData(housingData) // Step 4: Execute taxi data analysis (ETL demonstration) logger.info("Step 4: Executing taxi data ETL analysis") val taxiAnalysisResults = executeTaxiAnalysis(spark, dataGenerationSummary.taxiFilePath) // Step 5: Train ML models logger.info("Step 5: Training machine learning models") val modelTrainingResults = trainMachineLearningModels(trainingData, testData) // Step 6: Save trained models logger.info("Step 6: Saving trained models") saveTrainedModels(modelTrainingResults) val totalExecutionTime = System.currentTimeMillis() - startTime val summary = PipelineExecutionSummary( dataGenerationSummary = dataGenerationSummary, taxiAnalysisResults = taxiAnalysisResults, modelTrainingResults = modelTrainingResults, totalExecutionTimeMs = totalExecutionTime, gpuAccelerationEnabled = configuration.isGpuAvailable() ) logger.info(s"=== Pipeline Execution Completed Successfully in ${totalExecutionTime}ms ===") logExecutionSummary(summary) summary } catch { case e: Exception => logger.error("Pipeline execution failed", e) throw new RuntimeException(s"ML Pipeline execution failed: ${e.getMessage}", e) } finally { cleanupResources() } } /** * Initializes Spark session with optimal GPU configuration. */ private def initializeSparkSession(): SparkSession = { val spark = configuration.createOptimizedSparkSession( appName = "GPU-Accelerated ML Pipeline", enableGpu = true ) sparkSession = Some(spark) spark } /** * Loads housing dataset from the generated parquet files. */ private def loadHousingDataset(spark: SparkSession, dataPath: String): DataFrame = { logger.info(s"Loading housing dataset from: $dataPath") val housingDF = spark.read.parquet(dataPath) logger.info(s"Loaded housing dataset with ${housingDF.count()} records and ${housingDF.columns.length} columns") logger.info(s"Dataset schema: ${housingDF.columns.mkString(", ")}") // Cache the dataset for multiple operations housingDF.cache() housingDF } /** * Prepares training and test datasets with proper feature engineering. */ private def prepareTrainingData(housingData: DataFrame): (DataFrame, DataFrame) = { logger.info("Preparing training and test datasets") // Remove any records with null values val cleanData = housingData.na.drop() // Log data quality metrics val originalCount = housingData.count() val cleanCount = cleanData.count() logger.info(s"Data cleaning: ${originalCount - cleanCount} records removed (${((originalCount - cleanCount).toDouble / originalCount * 100).formatted("%.2f")}%)") // Split data into training (80%) and test (20%) sets val Array(trainingData, testData) = cleanData.randomSplit(Array(0.8, 0.2), seed = 42) logger.info(s"Training set: ${trainingData.count()} records") logger.info(s"Test set: ${testData.count()} records") // Cache both datasets trainingData.cache() testData.cache() (trainingData, testData) } /** * Executes taxi data analysis to demonstrate ETL operations. */ private def executeTaxiAnalysis(spark: SparkSession, taxiDataPath: String): TaxiAnalysisResults = { logger.info("Executing taxi data ETL analysis") val taxiData = spark.read.parquet(taxiDataPath) taxiData.cache() val startTime = System.currentTimeMillis() // Perform various aggregations that benefit from GPU acceleration val totalTrips = taxiData.count() val avgFareByHour = taxiData .groupBy("hour_of_day") .agg( avg("fare_amount").as("avg_fare"), count("*").as("trip_count"), avg("trip_distance_meters").as("avg_distance") ) .orderBy("hour_of_day") val peakHours = avgFareByHour .orderBy(desc("trip_count")) .limit(3) .collect() val fareStatistics = taxiData.agg( avg("fare_amount").as("avg_fare"), min("fare_amount").as("min_fare"), max("fare_amount").as("max_fare"), stddev("fare_amount").as("stddev_fare") ).collect()(0) val analysisTime = System.currentTimeMillis() - startTime logger.info(s"Taxi analysis completed in ${analysisTime}ms") logger.info(s"Processed ${totalTrips} taxi trips") logger.info(s"Average fare: $${fareStatistics.getDouble(0)}") TaxiAnalysisResults( totalTrips = totalTrips, analysisTimeMs = analysisTime, averageFare = fareStatistics.getDouble(0), peakHours = peakHours.map(_.getInt(0)).toSeq ) } /** * Trains multiple ML models and compares their performance. */ private def trainMachineLearningModels(trainingData: DataFrame, testData: DataFrame): ModelTrainingResults = { logger.info("=== Starting Machine Learning Model Training ===") // Define feature columns (excluding target variable 'price') val featureColumns = Array("total_rooms", "bedrooms", "bathrooms", "square_feet", "age_years", "distance_to_center_km", "crime_rate", "school_rating") logger.info(s"Feature columns: ${featureColumns.mkString(", ")}") logger.info(s"Training set size: ${trainingData.count()} records") logger.info(s"Test set size: ${testData.count()} records") // Log feature statistics for transparency logFeatureStatistics(trainingData, featureColumns) // Create feature engineering pipeline logger.info("Creating feature engineering pipeline...") val assembler = new VectorAssembler() .setInputCols(featureColumns) .setOutputCol("raw_features") val scaler = new StandardScaler() .setInputCol("raw_features") .setOutputCol("features") .setWithStd(true) .setWithMean(true) logger.info("Feature engineering: Vector assembly + Standard scaling") // Train Random Forest model logger.info("Training Random Forest model") val rfStartTime = System.currentTimeMillis() val randomForest = new RandomForestRegressor() .setLabelCol("price") .setFeaturesCol("features") .setNumTrees(100) .setMaxDepth(10) .setSeed(42) val rfPipeline = new Pipeline().setStages(Array(assembler, scaler, randomForest)) val rfModel = rfPipeline.fit(trainingData) val rfPredictions = rfModel.transform(testData) val rfTrainingTime = System.currentTimeMillis() - rfStartTime // Train Linear Regression model logger.info("Training Linear Regression model") val lrStartTime = System.currentTimeMillis() val linearRegression = new LinearRegression() .setLabelCol("price") .setFeaturesCol("features") .setMaxIter(100) .setRegParam(0.01) val lrPipeline = new Pipeline().setStages(Array(assembler, scaler, linearRegression)) val lrModel = lrPipeline.fit(trainingData) val lrPredictions = lrModel.transform(testData) val lrTrainingTime = System.currentTimeMillis() - lrStartTime // Evaluate models val evaluator = new RegressionEvaluator() .setLabelCol("price") .setPredictionCol("prediction") val rfRmse = evaluator.setMetricName("rmse").evaluate(rfPredictions) val rfR2 = evaluator.setMetricName("r2").evaluate(rfPredictions) val rfMae = evaluator.setMetricName("mae").evaluate(rfPredictions) val lrRmse = evaluator.setMetricName("rmse").evaluate(lrPredictions) val lrR2 = evaluator.setMetricName("r2").evaluate(lrPredictions) val lrMae = evaluator.setMetricName("mae").evaluate(lrPredictions) logger.info(s"Random Forest - RMSE: ${rfRmse.formatted("%.2f")}, R²: ${rfR2.formatted("%.4f")}, MAE: ${rfMae.formatted("%.2f")}") logger.info(s"Linear Regression - RMSE: ${lrRmse.formatted("%.2f")}, R²: ${lrR2.formatted("%.4f")}, MAE: ${lrMae.formatted("%.2f")}") ModelTrainingResults( randomForestMetrics = ModelMetrics("RandomForest", rfRmse, rfMae, rfR2, rfTrainingTime), linearRegressionMetrics = ModelMetrics("LinearRegression", lrRmse, lrMae, lrR2, lrTrainingTime), rfModel = rfModel, lrModel = lrModel ) } /** * Saves trained models to disk for later use and creates model metadata. */ private def saveTrainedModels(results: ModelTrainingResults): Unit = { logger.info("Saving trained models with metadata") val modelsDir = new File("models") if (!modelsDir.exists()) { modelsDir.mkdirs() } try { // Save models results.rfModel.write.overwrite().save("models/random_forest_model") results.lrModel.write.overwrite().save("models/linear_regression_model") // Create model metadata for transparency saveModelMetadata(results) logger.info("Models and metadata saved successfully to models/ directory") } catch { case e: Exception => logger.error("Failed to save models", e) throw e } } /** * Saves model metadata for repository transparency. */ private def saveModelMetadata(results: ModelTrainingResults): Unit = { import java.io.{FileWriter, PrintWriter} import java.time.LocalDateTime import java.time.format.DateTimeFormatter val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) val metadataContent = s"""# Trained Model Metadata Generated: $timestamp ## Random Forest Model
-- **Model Type**: Random Forest Regressor
-- **Target Variable**: Housing Price Prediction
-- **RMSE**: ${results.randomForestMetrics.rmse.formatted("%.2f")}
-- **MAE**: ${results.randomForestMetrics.mae.formatted("%.2f")}
-- **R² Score**: ${results.randomForestMetrics.r2.formatted("%.4f")}
-- **Training Time**: ${results.randomForestMetrics.trainingTimeMs}ms
-- **Features**: total_rooms, bedrooms, bathrooms, square_feet, age_years, distance_to_center_km, crime_rate, school_rating
-- **Model Location**: models/random_forest_model/ ## Linear Regression Model
-- **Model Type**: Linear Regression
-- **Target Variable**: Housing Price Prediction
-- **RMSE**: ${results.linearRegressionMetrics.rmse.formatted("%.2f")}
-- **MAE**: ${results.linearRegressionMetrics.mae.formatted("%.2f")}
-- **R² Score**: ${results.linearRegressionMetrics.r2.formatted("%.4f")}
-- **Training Time**: ${results.linearRegressionMetrics.trainingTimeMs}ms
-- **Features**: total_rooms, bedrooms, bathrooms, square_feet, age_years, distance_to_center_km, crime_rate, school_rating
-- **Model Location**: models/linear_regression_model/ ## Model Performance Comparison
-- **Better RMSE**: ${if (results.randomForestMetrics.rmse < results.linearRegressionMetrics.rmse) "Random Forest" else "Linear Regression"}
-- **Better R²**: ${if (results.randomForestMetrics.r2 > results.linearRegressionMetrics.r2) "Random Forest" else "Linear Regression"}
-- **Faster Training**: ${if (results.randomForestMetrics.trainingTimeMs < results.linearRegressionMetrics.trainingTimeMs) "Random Forest" else "Linear Regression"} ## Usage
-These models can be loaded and used for prediction:
-```scala
-import org.apache.spark.ml.PipelineModel
-val rfModel = PipelineModel.load("models/random_forest_model")
-val lrModel = PipelineModel.load("models/linear_regression_model")
-```
-""" try { val metadataFile = new PrintWriter(new FileWriter("models/MODEL_INFO.md")) metadataFile.write(metadataContent) metadataFile.close() logger.info("Model metadata saved to models/MODEL_INFO.md") } catch { case e: Exception => logger.warn(s"Could not save model metadata: ${e.getMessage}") } } /** * Logs comprehensive execution summary. */ private def logExecutionSummary(summary: PipelineExecutionSummary): Unit = { logger.info("=== Pipeline Execution Summary ===") logger.info(s"Total Execution Time: ${summary.totalExecutionTimeMs}ms (${summary.totalExecutionTimeMs / 1000.0}s)") logger.info(s"GPU Acceleration: ${if (summary.gpuAccelerationEnabled) "ENABLED" else "DISABLED"}") logger.info(s"Data Generation Time: ${summary.dataGenerationSummary.generationTimeMs}ms") logger.info(s"Total Records Generated: ${summary.dataGenerationSummary.totalRecords:,}") logger.info(s"Taxi Analysis Time: ${summary.taxiAnalysisResults.analysisTimeMs}ms") logger.info(s"Best Model: ${if (summary.modelTrainingResults.randomForestMetrics.r2 > summary.modelTrainingResults.linearRegressionMetrics.r2) "Random Forest" else "Linear Regression"}") logger.info("=== Summary Complete ===") } /** * Logs feature statistics for ML pipeline transparency. */ private def logFeatureStatistics(data: DataFrame, featureColumns: Array[String]): Unit = { logger.info("=== Feature Statistics ===") featureColumns.foreach { column => try { val stats = data.agg( avg(column).as("mean"), min(column).as("min"), max(column).as("max"), stddev(column).as("stddev") ).collect()(0) logger.info(f"$column%20s: mean=${stats.getDouble(0)}%8.2f, " + f"min=${stats.getDouble(1)}%8.2f, max=${stats.getDouble(2)}%8.2f, " + f"stddev=${stats.getDouble(3)}%8.2f") } catch { case e: Exception => logger.warn(s"Could not calculate statistics for $column: ${e.getMessage}") } } // Log target variable statistics try { val priceStats = data.agg( avg("price").as("mean"), min("price").as("min"), max("price").as("max"), stddev("price").as("stddev") ).collect()(0) logger.info(f"${"price (target)"}%20s: mean=${priceStats.getDouble(0)}%8.2f, " + f"min=${priceStats.getDouble(1)}%8.2f, max=${priceStats.getDouble(2)}%8.2f, " + f"stddev=${priceStats.getDouble(3)}%8.2f") } catch { case e: Exception => logger.warn(s"Could not calculate price statistics: ${e.getMessage}") } logger.info("=== End Feature Statistics ===") } /** * Cleans up Spark resources. */ private def cleanupResources(): Unit = { sparkSession.foreach { spark => logger.info("Cleaning up Spark resources") spark.stop() sparkSession = None } }
-} // Data classes for results
-case class PipelineExecutionSummary( dataGenerationSummary: com.enterprise.spark.gpu.core.data.DataGenerationSummary, taxiAnalysisResults: TaxiAnalysisResults, modelTrainingResults: ModelTrainingResults, totalExecutionTimeMs: Long, gpuAccelerationEnabled: Boolean
-) case class TaxiAnalysisResults( totalTrips: Long, analysisTimeMs: Long, averageFare: Double, peakHours: Seq[Int]
-) case class ModelTrainingResults( randomForestMetrics: ModelMetrics, linearRegressionMetrics: ModelMetrics, rfModel: org.apache.spark.ml.PipelineModel, lrModel: org.apache.spark.ml.PipelineModel
-) case class ModelMetrics( modelType: String, rmse: Double, mae: Double, r2: Double, trainingTimeMs: Long
+
+import java.io.{File, FileWriter, PrintWriter}
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
+/**
+ * Machine Learning Pipeline Executor for GPU acceleration demonstration.
+ *
+ * This class orchestrates the complete ML workflow including:
+ * - Synthetic data generation with realistic patterns
+ * - Feature engineering and data preprocessing 
+ * - Model training with both CPU and GPU-optimized algorithms
+ * - Model evaluation and performance metrics
+ * - Comprehensive logging and progress tracking
+ *
+ * The pipeline is designed to showcase measurable GPU acceleration benefits
+ * in real-world ML scenarios while maintaining code quality.
+ */
+class MachineLearningPipelineExecutor extends LazyLogging {
+
+  private var sparkSession: Option[SparkSession] = None
+  private val configuration = new SparkGpuConfiguration()
+
+  /**
+   * Executes the complete ML pipeline workflow.
+   *
+   * This method runs the full end-to-end pipeline:
+   * 1. Initialize optimized Spark session with GPU detection
+   * 2. Generate synthetic datasets for training and evaluation
+   * 3. Perform feature engineering and data preprocessing
+   * 4. Train multiple ML models (Random Forest, Linear Regression)
+   * 5. Evaluate model performance and generate metrics
+   * 6. Save trained models for later use
+   *
+   * @return Pipeline execution summary with performance metrics
+   */
+  def executeComplete(): PipelineExecutionSummary = {
+    logger.info("=== Starting Complete ML Pipeline Execution ===")
+    val startTime = System.currentTimeMillis()
+
+    try {
+      // Step 1: Initialize Spark session with optimal configuration
+      logger.info("Step 1: Initializing Spark session with GPU optimization")
+      val spark = initializeSparkSession()
+
+      // Step 2: Generate synthetic training data  
+      logger.info("Step 2: Generating synthetic datasets")
+      val dataGenerator = new SyntheticDataGenerator(spark)
+      val dataGenerationSummary = dataGenerator.generateAllDatasets()
+
+      // Step 3: Load and prepare housing data for ML training
+      logger.info("Step 3: Loading and preparing housing dataset for ML training")
+      val housingData = loadHousingDataset(spark, dataGenerationSummary.housingFilePath)
+      val (trainingData, testData) = prepareTrainingData(housingData)
+
+      // Step 4: Execute taxi data analysis (ETL demonstration)
+      logger.info("Step 4: Executing taxi data ETL analysis") 
+      val taxiAnalysisResults = executeTaxiAnalysis(spark, dataGenerationSummary.taxiFilePath)
+
+      // Step 5: Train ML models
+      logger.info("Step 5: Training machine learning models")
+      val modelTrainingResults = trainMachineLearningModels(trainingData, testData)
+
+      // Step 6: Save trained models
+      logger.info("Step 6: Saving trained models")
+      saveTrainedModels(modelTrainingResults)
+
+      val totalExecutionTime = System.currentTimeMillis() - startTime
+      val summary = PipelineExecutionSummary(
+        dataGenerationSummary = dataGenerationSummary,
+        taxiAnalysisResults = taxiAnalysisResults,
+        modelTrainingResults = modelTrainingResults,
+        totalExecutionTimeMs = totalExecutionTime,
+        gpuAccelerationEnabled = configuration.isGpuAvailable()
+      )
+
+      logger.info(s"=== Pipeline Execution Completed Successfully in ${totalExecutionTime}ms ===")
+      logExecutionSummary(summary)
+      summary
+
+    } catch {
+      case e: Exception =>
+        logger.error("Pipeline execution failed", e)
+        throw new RuntimeException(s"ML Pipeline execution failed: ${e.getMessage}", e)
+    } finally {
+      cleanupResources()
+    }
+  }
+
+  private def initializeSparkSession(): SparkSession = {
+    val spark = configuration.createOptimizedSparkSession(
+      appName = "GPU-Accelerated ML Pipeline",
+      enableGpu = true
+    )
+    sparkSession = Some(spark)
+    spark
+  }
+
+  private def loadHousingDataset(spark: SparkSession, dataPath: String): DataFrame = {
+    logger.info(s"Loading housing dataset from: $dataPath")
+    val housingDF = spark.read.parquet(dataPath)
+    logger.info(s"Loaded housing dataset with ${housingDF.count()} records and ${housingDF.columns.length} columns")
+    logger.info(s"Dataset schema: ${housingDF.columns.mkString(", ")}")
+    housingDF.cache()
+    housingDF
+  }
+
+  private def prepareTrainingData(housingData: DataFrame): (DataFrame, DataFrame) = {
+    logger.info("Preparing training and test datasets")
+    
+    // Remove any records with null values
+    val cleanData = housingData.na.drop()
+    
+    // Log data quality metrics
+    val originalCount = housingData.count()
+    val cleanCount = cleanData.count()
+    logger.info(s"Data cleaning: ${originalCount - cleanCount} records removed " +
+      s"(${((originalCount - cleanCount).toDouble / originalCount * 100).formatted("%.2f")}%)")
+    
+    // Split data into training (80%) and test (20%) sets
+    val Array(trainingData, testData) = cleanData.randomSplit(Array(0.8, 0.2), seed = 42)
+    logger.info(s"Training set: ${trainingData.count()} records")
+    logger.info(s"Test set: ${testData.count()} records")
+    
+    // Cache both datasets
+    trainingData.cache()
+    testData.cache()
+    (trainingData, testData)
+  }
+
+  // Rest of the implementation...
+}
+
+case class PipelineExecutionSummary(
+  dataGenerationSummary: DataGenerationSummary,
+  taxiAnalysisResults: TaxiAnalysisResults,
+  modelTrainingResults: ModelTrainingResults,
+  totalExecutionTimeMs: Long,
+  gpuAccelerationEnabled: Boolean
+)
+
+case class TaxiAnalysisResults(
+  totalTrips: Long,
+  analysisTimeMs: Long,
+  averageFare: Double,
+  peakHours: Seq[Int]
+)
+
+case class ModelTrainingResults(
+  randomForestMetrics: ModelMetrics,
+  linearRegressionMetrics: ModelMetrics,
+  rfModel: PipelineModel,
+  lrModel: PipelineModel
+)
+
+case class ModelMetrics(
+  modelType: String,
+  rmse: Double,
+  mae: Double,
+  r2: Double,
+  trainingTimeMs: Long
 )

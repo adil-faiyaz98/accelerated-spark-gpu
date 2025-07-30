@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.8-devel-ubuntu20.04
+FROM nvidia/cuda:11.8-runtime-ubuntu20.04
 
 # Install Java 11
 RUN apt-get update && \
@@ -22,14 +22,14 @@ ENV SPARK_HOME=/opt/spark
 ENV PATH=$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin
 
 # Copy project files
-WORKDIR /app
+WORKDIR /opt/spark
 COPY . .
 
 # Build the project
-RUN sbt compile
+RUN sbt compile "core/compile"
 
 # Expose Spark UI port
 EXPOSE 4040
 
 # Default command
-CMD ["sbt", "run"]
+CMD ["sbt", "core/run"]

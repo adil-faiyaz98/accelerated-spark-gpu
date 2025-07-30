@@ -44,6 +44,19 @@ brew install sbt
 # Windows - download from scala-sbt.org
 ```
 
+### Install CUDA Toolkit (Optional for GPU Acceleration)
+
+```bash
+# Ubuntu/Debian
+sudo apt install nvidia-cuda-toolkit
+
+# macOS
+# CUDA is not natively supported; use an external GPU setup if required.
+
+# Windows
+# Download and install from https://developer.nvidia.com/cuda-downloads
+```
+
 ## Running the Pipeline
 
 ```bash
@@ -68,4 +81,8 @@ After running the pipeline, you'll find:
 
 - Ensure Java 11+ is installed
 - Check that SBT is in your PATH
-- For GPU acceleration, install NVIDIA drivers and CUDA
+- For GPU acceleration:
+    - Install NVIDIA drivers
+    - Install CUDA Toolkit
+    - Verify GPU compatibility with `nvidia-smi`
+- Check for sufficient memory (8GB+ recommended)
