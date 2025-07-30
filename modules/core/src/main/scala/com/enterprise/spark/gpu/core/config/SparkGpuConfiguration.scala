@@ -1,4 +1,188 @@
-package com.enterprise.spark.gpu.core.config import com.typesafe.scalalogging.LazyLogging
-import org.apache.spark.sql.SparkSession /** * Centralized configuration management for GPU-accelerated Spark applications. * * This class provides enterprise-grade configuration management with: * - GPU detection and automatic fallback to CPU * - Environment-specific settings (development, testing, production) * - Performance optimization based on available resources * - Comprehensive logging of configuration decisions * * @author Enterprise Spark GPU Team */
-class SparkGpuConfiguration extends LazyLogging { /** * Creates an optimally configured SparkSession with GPU acceleration when available. * * The configuration automatically: * - Detects available GPU resources * - Configures RAPIDS accelerator if GPU is available * - Falls back to CPU-optimized settings if no GPU detected * - Applies memory and performance optimizations * * @param appName The name of the Spark application * @param enableGpu Whether to attempt GPU acceleration (default: true) * @return Configured SparkSession ready for use */ def createOptimizedSparkSession(appName: String, enableGpu: Boolean = true): SparkSession = { logger.info(s"Creating Spark session for application: $appName") logger.info(s"GPU acceleration requested: $enableGpu") val builder = SparkSession.builder() .appName(appName) .master(determineMasterUrl()) // Apply base configuration applyBaseConfiguration(builder) // Apply GPU configuration if requested and available if (enableGpu && isGpuAvailable()) { logger.info("GPU detected - applying GPU acceleration configuration") applyGpuConfiguration(builder) } else { logger.info("Using CPU-only configuration") applyCpuOptimizedConfiguration(builder) } // Apply performance optimizations applyPerformanceOptimizations(builder) val spark = builder.getOrCreate() logConfigurationSummary(spark, enableGpu && isGpuAvailable()) spark } /** * Determines the appropriate Spark master URL based on environment. */ private def determineMasterUrl(): String = { val masterUrl = sys.env.getOrElse("SPARK_MASTER", "local[*]") logger.info(s"Using Spark master: $masterUrl") masterUrl } /** * Applies base Spark configuration common to all execution modes. */ private def applyBaseConfiguration(builder: SparkSession.Builder): Unit = { builder .config("spark.sql.adaptive.enabled", "true") .config("spark.sql.adaptive.coalescePartitions.enabled", "true") .config("spark.sql.adaptive.skewJoin.enabled", "true") .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer") .config("spark.sql.execution.arrow.pyspark.enabled", "true") .config("spark.sql.shuffle.partitions", "200") .config("spark.sql.adaptive.shuffle.targetPostShuffleInputSize", "64MB") } /** * Applies GPU-specific configuration using RAPIDS accelerator. */ private def applyGpuConfiguration(builder: SparkSession.Builder): Unit = { builder .config("spark.plugins", "com.nvidia.spark.SQLPlugin") .config("spark.rapids.sql.enabled", "true") .config("spark.rapids.memory.gpu.pooling.enabled", "true") .config("spark.rapids.memory.gpu.allocFraction", "0.8") .config("spark.rapids.sql.concurrentGpuTasks", "2") .config("spark.rapids.sql.explain", "NOT_ON_GPU") .config("spark.rapids.sql.incompatibleOps.enabled", "true") } /** * Applies CPU-optimized configuration when GPU is not available. */ private def applyCpuOptimizedConfiguration(builder: SparkSession.Builder): Unit = { val availableCores = Runtime.getRuntime.availableProcessors() val optimizedCores = Math.max(2, availableCores - 1) builder .config("spark.default.parallelism", optimizedCores.toString) .config("spark.sql.shuffle.partitions", (optimizedCores * 2).toString) .config("spark.executor.cores", "4") .config("spark.executor.memory", "4g") .config("spark.driver.memory", "2g") } /** * Applies general performance optimizations. */ private def applyPerformanceOptimizations(builder: SparkSession.Builder): Unit = { builder .config("spark.executor.memoryFraction", "0.8") .config("spark.sql.adaptive.advisoryPartitionSizeInBytes", "128MB") .config("spark.sql.adaptive.maxShuffledHashJoinLocalMapThreshold", "0") .config("spark.sql.join.preferSortMergeJoin", "true") } /** * Detects if GPU acceleration is available on the current system. * * @return true if GPU is detected and RAPIDS libraries are available */ def isGpuAvailable(): Boolean = { try { // Check if RAPIDS plugin classes are available Class.forName("com.nvidia.spark.SQLPlugin") // Additional GPU detection logic could be added here // For now, we assume if RAPIDS is available, GPU might be available val gpuAvailable = sys.env.get("CUDA_VISIBLE_DEVICES").isDefined || sys.env.get("NVIDIA_VISIBLE_DEVICES").isDefined || checkNvidiaDrivers() logger.info(s"GPU availability check result: $gpuAvailable") gpuAvailable } catch { case _: ClassNotFoundException => logger.info("RAPIDS plugin not found - GPU acceleration not available") false case e: Exception => logger.warn(s"Error checking GPU availability: ${e.getMessage}") false } } /** * Checks if NVIDIA drivers are available (simplified check). */ private def checkNvidiaDrivers(): Boolean = { try { val process = Runtime.getRuntime.exec("nvidia-smi") val exitCode = process.waitFor() exitCode == 0 } catch { case _: Exception => false } } /** * Logs a comprehensive summary of the applied configuration. */ private def logConfigurationSummary(spark: SparkSession, gpuEnabled: Boolean): Unit = { logger.info("=== Spark Configuration Summary ===") logger.info(s"Application Name: ${spark.sparkContext.appName}") logger.info(s"Master URL: ${spark.sparkContext.master}") logger.info(s"GPU Acceleration: ${if (gpuEnabled) "ENABLED" else "DISABLED"}") logger.info(s"Available Cores: ${Runtime.getRuntime.availableProcessors()}") logger.info(s"Spark Version: ${spark.version}") if (gpuEnabled) { logger.info("GPU Configuration:") logger.info(" - RAPIDS SQL Plugin: Enabled") logger.info(" - GPU Memory Pool: Enabled") logger.info(" - GPU Memory Fraction: 80%") logger.info(" - Concurrent GPU Tasks: 2") } logger.info("Performance Optimizations:") logger.info(" - Adaptive Query Execution: Enabled") logger.info(" - Partition Coalescing: Enabled") logger.info(" - Skew Join Optimization: Enabled") logger.info(" - Kryo Serialization: Enabled") logger.info("=== Configuration Summary Complete ===") }
+package com.enterprise.spark.gpu.core.config
+
+import com.typesafe.scalalogging.LazyLogging
+import org.apache.spark.sql.SparkSession
+
+/**
+ * Centralized configuration management for GPU-accelerated Spark applications.
+ *
+ * This class provides enterprise-grade configuration management with:
+ * - GPU detection and automatic fallback to CPU
+ * - Environment-specific settings (development, testing, production)
+ * - Performance optimization based on available resources
+ * - Comprehensive logging of configuration decisions
+ */
+class SparkGpuConfiguration extends LazyLogging {
+
+  /**
+   * Creates an optimally configured SparkSession with GPU acceleration when available.
+   *
+   * The configuration automatically:
+   * - Detects available GPU resources
+   * - Configures RAPIDS accelerator if GPU is available
+   * - Falls back to CPU-optimized settings if no GPU detected
+   * - Applies memory and performance optimizations
+   *
+   * @param appName The name of the Spark application
+   * @param enableGpu Whether to attempt GPU acceleration (default: true)
+   * @return Configured SparkSession ready for use
+   */
+  def createOptimizedSparkSession(appName: String, enableGpu: Boolean = true): SparkSession = {
+    logger.info(s"Creating Spark session for application: $appName")
+    logger.info(s"GPU acceleration requested: $enableGpu")
+
+    val builder = SparkSession.builder()
+      .appName(appName)
+      .master(determineMasterUrl())
+
+    // Apply base configuration
+    applyBaseConfiguration(builder)
+
+    // Apply GPU configuration if requested and available
+    if (enableGpu && isGpuAvailable()) {
+      logger.info("GPU detected - applying GPU acceleration configuration")
+      applyGpuConfiguration(builder)
+    } else {
+      logger.info("Using CPU-only configuration")
+      applyCpuOptimizedConfiguration(builder)
+    }
+
+    // Apply performance optimizations
+    applyPerformanceOptimizations(builder)
+
+    val spark = builder.getOrCreate()
+    logConfigurationSummary(spark, enableGpu && isGpuAvailable())
+    spark
+  }
+
+  /**
+   * Determines the appropriate Spark master URL based on environment.
+   */
+  private def determineMasterUrl(): String = {
+    val masterUrl = sys.env.getOrElse("SPARK_MASTER", "local[*]")
+    logger.info(s"Using Spark master: $masterUrl")
+    masterUrl
+  }
+
+  /**
+   * Applies base Spark configuration common to all execution modes.
+   */
+  private def applyBaseConfiguration(builder: SparkSession.Builder): Unit = {
+    builder
+      .config("spark.sql.adaptive.enabled", "true")
+      .config("spark.sql.adaptive.coalescePartitions.enabled", "true")
+      .config("spark.sql.adaptive.skewJoin.enabled", "true")
+      .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+      .config("spark.sql.execution.arrow.pyspark.enabled", "true")
+      .config("spark.sql.shuffle.partitions", "200")
+      .config("spark.sql.adaptive.shuffle.targetPostShuffleInputSize", "64MB")
+  }
+
+  /**
+   * Applies GPU-specific configuration using RAPIDS accelerator.
+   */
+  private def applyGpuConfiguration(builder: SparkSession.Builder): Unit = {
+    builder
+      .config("spark.plugins", "com.nvidia.spark.SQLPlugin")
+      .config("spark.rapids.sql.enabled", "true")
+      .config("spark.rapids.memory.gpu.pooling.enabled", "true")
+      .config("spark.rapids.memory.gpu.allocFraction", "0.8")
+      .config("spark.rapids.sql.concurrentGpuTasks", "2")
+      .config("spark.rapids.sql.explain", "NOT_ON_GPU")
+      .config("spark.rapids.sql.incompatibleOps.enabled", "true")
+  }
+
+  /**
+   * Applies CPU-optimized configuration when GPU is not available.
+   */
+  private def applyCpuOptimizedConfiguration(builder: SparkSession.Builder): Unit = {
+    val availableCores = Runtime.getRuntime.availableProcessors()
+    val optimizedCores = Math.max(2, availableCores - 1)
+
+    builder
+      .config("spark.default.parallelism", optimizedCores.toString)
+      .config("spark.sql.shuffle.partitions", (optimizedCores * 2).toString)
+      .config("spark.executor.cores", "4")
+      .config("spark.executor.memory", "4g")
+      .config("spark.driver.memory", "2g")
+  }
+
+  /**
+   * Applies general performance optimizations.
+   */
+  private def applyPerformanceOptimizations(builder: SparkSession.Builder): Unit = {
+    builder
+      .config("spark.executor.memoryFraction", "0.8")
+      .config("spark.sql.adaptive.advisoryPartitionSizeInBytes", "128MB")
+      .config("spark.sql.adaptive.maxShuffledHashJoinLocalMapThreshold", "0")
+      .config("spark.sql.join.preferSortMergeJoin", "true")
+  }
+
+  /**
+   * Detects if GPU acceleration is available on the current system.
+   *
+   * @return true if GPU is detected and RAPIDS libraries are available
+   */
+  def isGpuAvailable(): Boolean = {
+    try {
+      // Check if RAPIDS plugin classes are available
+      Class.forName("com.nvidia.spark.SQLPlugin")
+
+      // Additional GPU detection logic could be added here
+      // For now, we assume if RAPIDS is available, GPU might be available
+      val gpuAvailable = sys.env.get("CUDA_VISIBLE_DEVICES").isDefined ||
+        sys.env.get("NVIDIA_VISIBLE_DEVICES").isDefined ||
+        checkNvidiaDrivers()
+
+      logger.info(s"GPU availability check result: $gpuAvailable")
+      gpuAvailable
+    } catch {
+      case _: ClassNotFoundException =>
+        logger.info("RAPIDS plugin not found - GPU acceleration not available")
+        false
+      case e: Exception =>
+        logger.warn(s"Error checking GPU availability: ${e.getMessage}")
+        false
+    }
+  }
+
+  /**
+   * Checks if NVIDIA drivers are available (simplified check).
+   */
+  private def checkNvidiaDrivers(): Boolean = {
+    try {
+      val process = Runtime.getRuntime.exec("nvidia-smi")
+      val exitCode = process.waitFor()
+      exitCode == 0
+    } catch {
+      case _: Exception => false
+    }
+  }
+
+  /**
+   * Logs a comprehensive summary of the applied configuration.
+   */
+  private def logConfigurationSummary(spark: SparkSession, gpuEnabled: Boolean): Unit = {
+    logger.info("=== Spark Configuration Summary ===")
+    logger.info(s"Application Name: ${spark.sparkContext.appName}")
+    logger.info(s"Master URL: ${spark.sparkContext.master}")
+    logger.info(s"GPU Acceleration: ${if (gpuEnabled) "ENABLED" else "DISABLED"}")
+    logger.info(s"Available Cores: ${Runtime.getRuntime.availableProcessors()}")
+    logger.info(s"Spark Version: ${spark.version}")
+
+    if (gpuEnabled) {
+      logger.info("GPU Configuration:")
+      logger.info("  - RAPIDS SQL Plugin: Enabled")
+      logger.info("  - GPU Memory Pool: Enabled")
+      logger.info("  - GPU Memory Fraction: 80%")
+      logger.info("  - Concurrent GPU Tasks: 2")
+    }
+
+    logger.info("Performance Optimizations:")
+    logger.info("  - Adaptive Query Execution: Enabled")
+    logger.info("  - Partition Coalescing: Enabled")
+    logger.info("  - Skew Join Optimization: Enabled")
+    logger.info("  - Kryo Serialization: Enabled")
+    logger.info("=== Configuration Summary Complete ===")
+  }
 }
