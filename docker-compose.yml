@@ -1,23 +1,24 @@
+
 version: '3.8'
+
 services:
   spark-gpu:
-    build: .
-    container_name: accelerated-spark-gpu
+    image: spark-gpu:latest
     runtime: nvidia
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
-      - CUDA_VISIBLE_DEVICES=0
-    volumes:
-      - ./data:/app/data
-      - ./models:/app/models
-      - ./reports:/app/reports
     ports:
       - "4040:4040" # Spark UI
       - "8080:8080" # Spark Master UI
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+      - "7077:7077" # Spark Master Port
+      - "8081:8081" # Spark Worker UI
+    volumes:
+      - ./data:/opt/spark/data
+      - ./models:/opt/spark/models
+      - ./reports:/opt/spark/reports
+    networks:
+      - spark-network
+
+networks:
+  spark-network:
+    driver: bridge
