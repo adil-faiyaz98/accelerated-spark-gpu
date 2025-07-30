@@ -1,2 +1,23 @@
-{ "class": "org.apache.spark.ml.feature.VectorAssembler", "timestamp": 1737508800000, "sparkVersion": "3.5.1", "uid": "VectorAssembler_housing_features_lr", "paramMap": { "inputCols": [ "total_rooms", "bedrooms", "bathrooms", "square_feet", "age_years", "distance_to_center_km", "crime_rate", "school_rating" ], "outputCol": "raw_features", "handleInvalid": "error" }, "defaultParamMap": { "handleInvalid": "error" }
+{
+  "class": "org.apache.spark.ml.feature.VectorAssembler",
+  "timestamp": 1737508800000,
+  "sparkVersion": "3.5.1",
+  "uid": "VectorAssembler_housing_features_lr",
+  "paramMap": {
+    "inputCols": [
+      "total_rooms",
+      "bedrooms",
+      "bathrooms",
+      "square_feet",
+      "age_years",
+      "distance_to_center_km",
+      "crime_rate",
+      "school_rating"
+    ],
+    "outputCol": "raw_features",
+    "handleInvalid": "error"
+  },
+  "defaultParamMap": {
+    "handleInvalid": "error"
+  }
 }

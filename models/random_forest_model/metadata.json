@@ -1,2 +1,49 @@
-{ "class": "org.apache.spark.ml.PipelineModel", "timestamp": 1737508800000, "sparkVersion": "3.5.1", "uid": "pipeline_random_forest_housing_predictor", "paramMap": { "stages": [ { "class": "org.apache.spark.ml.feature.VectorAssembler", "inputCols": ["total_rooms", "bedrooms", "bathrooms", "square_feet", "age_years", "distance_to_center_km", "crime_rate", "school_rating"], "outputCol": "raw_features" }, { "class": "org.apache.spark.ml.feature.StandardScaler", "inputCol": "raw_features", "outputCol": "features", "withMean": true, "withStd": true }, { "class": "org.apache.spark.ml.regression.RandomForestRegressor", "featuresCol": "features", "labelCol": "price", "predictionCol": "prediction", "numTrees": 100, "maxDepth": 10, "seed": 42 } ] }, "defaultParamMap": {}, "performance": { "rmse": 45234.67, "mae": 32156.89, "r2": 0.7834, "trainingTimeMs": 12450, "trainingRecords": 400000, "testRecords": 100000 }
+{
+  "class": "org.apache.spark.ml.PipelineModel",
+  "timestamp": 1737508800000,
+  "sparkVersion": "3.5.1",
+  "uid": "pipeline_random_forest_housing_predictor",
+  "paramMap": {
+    "stages": [
+      {
+        "class": "org.apache.spark.ml.feature.VectorAssembler",
+        "inputCols": [
+          "total_rooms",
+          "bedrooms",
+          "bathrooms",
+          "square_feet",
+          "age_years",
+          "distance_to_center_km",
+          "crime_rate",
+          "school_rating"
+        ],
+        "outputCol": "raw_features"
+      },
+      {
+        "class": "org.apache.spark.ml.feature.StandardScaler",
+        "inputCol": "raw_features",
+        "outputCol": "features",
+        "withMean": true,
+        "withStd": true
+      },
+      {
+        "class": "org.apache.spark.ml.regression.RandomForestRegressor",
+        "featuresCol": "features",
+        "labelCol": "price",
+        "predictionCol": "prediction",
+        "numTrees": 100,
+        "maxDepth": 10,
+        "seed": 42
+      }
+    ]
+  },
+  "defaultParamMap": {},
+  "performance": {
+    "rmse": 45234.67,
+    "mae": 32156.89,
+    "r2": 0.7834,
+    "trainingTimeMs": 12450,
+    "trainingRecords": 400000,
+    "testRecords": 100000
+  }
 }

@@ -1,2 +1,36 @@
-{ "class": "org.apache.spark.ml.feature.StandardScalerModel", "timestamp": 1737508800000, "sparkVersion": "3.5.1", "uid": "StandardScaler_housing_features", "paramMap": { "inputCol": "raw_features", "outputCol": "features", "withMean": true, "withStd": true }, "defaultParamMap": { "withMean": false, "withStd": true }, "mean": [ 4.2, // total_rooms 2.1, // bedrooms 1.8, // bathrooms 1893.5, // square_feet 45.2, // age_years 25.3, // distance_to_center_km 5.1, // crime_rate 6.2 // school_rating ], "std": [ 1.8, // total_rooms 0.9, // bedrooms 0.7, // bathrooms 687.2, // square_feet 28.9, // age_years 14.7, // distance_to_center_km 2.8, // crime_rate 2.9 // school_rating ]
+{
+  "class": "org.apache.spark.ml.feature.StandardScalerModel",
+  "timestamp": 1737508800000,
+  "sparkVersion": "3.5.1",
+  "uid": "StandardScaler_housing_features",
+  "paramMap": {
+    "inputCol": "raw_features",
+    "outputCol": "features",
+    "withMean": true,
+    "withStd": true
+  },
+  "defaultParamMap": {
+    "withMean": false,
+    "withStd": true
+  },
+  "mean": [
+    4.2,     // total_rooms
+    2.1,     // bedrooms
+    1.8,     // bathrooms
+    1893.5,  // square_feet
+    45.2,    // age_years
+    25.3,    // distance_to_center_km
+    5.1,     // crime_rate
+    6.2      // school_rating
+  ],
+  "std": [
+    1.8,     // total_rooms
+    0.9,     // bedrooms
+    0.7,     // bathrooms
+    687.2,   // square_feet
+    28.9,    // age_years
+    14.7,    // distance_to_center_km
+    2.8,     // crime_rate
+    2.9      // school_rating
+  ]
 }

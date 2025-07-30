@@ -1,2 +1,48 @@
-{ "class": "org.apache.spark.ml.PipelineModel", "timestamp": 1737508800000, "sparkVersion": "3.5.1", "uid": "pipeline_linear_regression_housing_predictor", "paramMap": { "stages": [ { "class": "org.apache.spark.ml.feature.VectorAssembler", "inputCols": ["total_rooms", "bedrooms", "bathrooms", "square_feet", "age_years", "distance_to_center_km", "crime_rate", "school_rating"], "outputCol": "raw_features" }, { "class": "org.apache.spark.ml.feature.StandardScaler", "inputCol": "raw_features", "outputCol": "features", "withMean": true, "withStd": true }, { "class": "org.apache.spark.ml.regression.LinearRegression", "featuresCol": "features", "labelCol": "price", "predictionCol": "prediction", "maxIter": 100, "regParam": 0.01 } ] }, "defaultParamMap": {}, "performance": { "rmse": 52891.23, "mae": 38742.15, "r2": 0.7234, "trainingTimeMs": 3890, "trainingRecords": 400000, "testRecords": 100000 }
+{
+  "class": "org.apache.spark.ml.PipelineModel",
+  "timestamp": 1737508800000,
+  "sparkVersion": "3.5.1",
+  "uid": "pipeline_linear_regression_housing_predictor",
+  "paramMap": {
+    "stages": [
+      {
+        "class": "org.apache.spark.ml.feature.VectorAssembler",
+        "inputCols": [
+          "total_rooms",
+          "bedrooms",
+          "bathrooms",
+          "square_feet",
+          "age_years",
+          "distance_to_center_km",
+          "crime_rate",
+          "school_rating"
+        ],
+        "outputCol": "raw_features"
+      },
+      {
+        "class": "org.apache.spark.ml.feature.StandardScaler",
+        "inputCol": "raw_features",
+        "outputCol": "features",
+        "withMean": true,
+        "withStd": true
+      },
+      {
+        "class": "org.apache.spark.ml.regression.LinearRegression",
+        "featuresCol": "features",
+        "labelCol": "price",
+        "predictionCol": "prediction",
+        "maxIter": 100,
+        "regParam": 0.01
+      }
+    ]
+  },
+  "defaultParamMap": {},
+  "performance": {
+    "rmse": 52891.23,
+    "mae": 38742.15,
+    "r2": 0.7234,
+    "trainingTimeMs": 3890,
+    "trainingRecords": 400000,
+    "testRecords": 100000
+  }
 }

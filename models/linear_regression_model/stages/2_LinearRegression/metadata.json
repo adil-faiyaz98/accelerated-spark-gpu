@@ -1,2 +1,55 @@
-{ "class": "org.apache.spark.ml.regression.LinearRegressionModel", "timestamp": 1737508800000, "sparkVersion": "3.5.1", "uid": "LinearRegression_housing_predictor", "paramMap": { "featuresCol": "features", "labelCol": "price", "predictionCol": "prediction", "maxIter": 100, "regParam": 0.01, "elasticNetParam": 0.0, "tol": 1e-6, "fitIntercept": true, "standardization": true, "solver": "auto" }, "defaultParamMap": { "maxIter": 100, "regParam": 0.0, "elasticNetParam": 0.0, "tol": 1e-6, "fitIntercept": true, "standardization": true }, "coefficients": { "type": 1, "size": 8, "values": [ 15234.56, // total_rooms coefficient -2345.67, // bedrooms coefficient 8901.23, // bathrooms coefficient 125.78, // square_feet coefficient -456.89, // age_years coefficient -1234.56, // distance_to_center_km coefficient -2890.12, // crime_rate coefficient 4567.89 // school_rating coefficient ] }, "intercept": 125000.0, "scale": 1.0, "performance": { "trainingRMSE": 52891.23, "trainingMAE": 38742.15, "trainingR2": 0.7234, "testRMSE": 54123.67, "testMAE": 39876.54, "testR2": 0.7123, "trainingTimeMs": 3890, "trainingRecords": 400000, "testRecords": 100000, "iterations": 87, "objectiveHistory": [0.5, 0.3, 0.2, 0.15, 0.12, 0.1, 0.09, 0.08] }
+{
+  "class": "org.apache.spark.ml.regression.LinearRegressionModel",
+  "timestamp": 1737508800000,
+  "sparkVersion": "3.5.1",
+  "uid": "LinearRegression_housing_predictor",
+  "paramMap": {
+    "featuresCol": "features",
+    "labelCol": "price",
+    "predictionCol": "prediction",
+    "maxIter": 100,
+    "regParam": 0.01,
+    "elasticNetParam": 0.0,
+    "tol": 1e-6,
+    "fitIntercept": true,
+    "standardization": true,
+    "solver": "auto"
+  },
+  "defaultParamMap": {
+    "maxIter": 100,
+    "regParam": 0.0,
+    "elasticNetParam": 0.0,
+    "tol": 1e-6,
+    "fitIntercept": true,
+    "standardization": true
+  },
+  "coefficients": {
+    "type": 1,
+    "size": 8,
+    "values": [
+      15234.56,  // total_rooms coefficient
+      -2345.67,  // bedrooms coefficient
+      8901.23,   // bathrooms coefficient
+      125.78,    // square_feet coefficient
+      -456.89,   // age_years coefficient
+      -1234.56,  // distance_to_center_km coefficient
+      -2890.12,  // crime_rate coefficient
+      4567.89    // school_rating coefficient
+    ]
+  },
+  "intercept": 125000.0,
+  "scale": 1.0,
+  "performance": {
+    "trainingRMSE": 52891.23,
+    "trainingMAE": 38742.15,
+    "trainingR2": 0.7234,
+    "testRMSE": 54123.67,
+    "testMAE": 39876.54,
+    "testR2": 0.7123,
+    "trainingTimeMs": 3890,
+    "trainingRecords": 400000,
+    "testRecords": 100000,
+    "iterations": 87,
+    "objectiveHistory": [0.5, 0.3, 0.2, 0.15, 0.12, 0.1, 0.09, 0.08]
+  }
 }
