@@ -1,1 +1,23 @@
-version: '3.8' services: spark-gpu: build: . container_name: accelerated-spark-gpu runtime: nvidia environment: - NVIDIA_VISIBLE_DEVICES=all - CUDA_VISIBLE_DEVICES=0 volumes: - ./data:/app/data - ./models:/app/models - ./reports:/app/reports ports: - "4040:4040" # Spark UI - "8080:8080" # Spark Master UI deploy: resources: reservations: devices: - driver: nvidia count: 1 capabilities: [gpu]
+version: '3.8'
+services:
+  spark-gpu:
+    build: .
+    container_name: accelerated-spark-gpu
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - CUDA_VISIBLE_DEVICES=0
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./reports:/app/reports
+    ports:
+      - "4040:4040" # Spark UI
+      - "8080:8080" # Spark Master UI
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
